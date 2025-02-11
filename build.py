@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.12
 import yaml
 import subprocess
 import os
@@ -37,22 +37,29 @@ GLOBAL_MOUNT_POINT_LIST = [
     "/nvmescratch",
 ]
 
-ARCHITECTURES = {"arm64": "aarch64"}
+ARCHITECTURES = {
+    "arm64": "aarch64",
+    "aarch64": "aarch64",
+}
 
 _jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined)
 
 
 class BuildContext(object):
-    def __init__(self, name, version):
+    def __init__(self, name, version, arch):
         self.name = name
         self.version = version
+        self.arch = arch
+        self.max_parallel_jobs = os.cpu_count()
 
-    def get_architecture(self):
-        return ARCHITECTURES[platform.machine()]
+    def set_max_parallel_jobs(self, max_parallel_jobs):
+        self.max_parallel_jobs = max_parallel_jobs
 
     def render_template(self, template):
         tpl = _jinja_env.from_string(template)
-        return tpl.render(context=self, arch=self.get_architecture())
+        return tpl.render(
+            context=self, arch=self.arch, parallel_jobs=self.max_parallel_jobs
+        )
 
     def execute_condition(self, condition):
         result = self.render_template("{{" + condition + "}}")
@@ -73,7 +80,7 @@ class BuildContext(object):
         else:
             raise ValueError("Template object not supported.")
 
-    def build_neurodocker(self, build_directive, deploy):
+    def build_neurodocker(self, build_directive, deploy, has_test):
         args = ["neurodocker", "generate", "docker"]
 
         base = self.execute_template(build_directive.get("base-image") or "")
@@ -156,6 +163,9 @@ class BuildContext(object):
 
         args += ["--copy", "README.md", "/README.md"]
 
+        if has_test:
+            args += ["--copy", "test.sh", "/test.sh"]
+
         return subprocess.check_output(args).decode("utf-8")
 
 
@@ -176,6 +186,13 @@ def main(args):
     parser.add_argument(
         "--build", action="store_true", help="Build the Docker image after creating it"
     )
+    parser.add_argument(
+        "--max-parallel-jobs",
+        type=int,
+        help="Maximum number of parallel jobs to run during the build",
+        default=os.cpu_count(),
+    )
+    parser.add_argument("--test", action="store_true", help="Run tests after building")
 
     args = parser.parse_args()
 
@@ -191,7 +208,17 @@ def main(args):
 
     readme = description_file.get("readme") or ""
 
-    ctx = BuildContext(name, version)
+    arch = ARCHITECTURES[platform.machine()]
+
+    allowed_architectures = description_file.get("architectures") or []
+    if allowed_architectures == []:
+        raise ValueError("No architectures specified in description file.")
+
+    if arch not in allowed_architectures:
+        raise ValueError(f"Architecture {arch} not supported by this recipe.")
+
+    ctx = BuildContext(name, version, arch)
+    ctx.set_max_parallel_jobs(args.max_parallel_jobs)
 
     if "variables" in description_file:
         for key, value in description_file["variables"].items():
@@ -215,7 +242,7 @@ def main(args):
     ctx.build_info = description_file.get("build") or None
 
     if ctx.build_info is None:
-        raise ValueError("No build tag found in description file.")
+        raise ValueError("No build info found in description file.")
 
     ctx.build_kind = ctx.build_info.get("kind") or ""
     if ctx.build_kind == "":
@@ -264,9 +291,21 @@ def main(args):
         if "executable" in file and file["executable"]:
             os.chmod(output_filename, 0o755)
 
+    test_info = description_file.get("test") or None
+
+    has_test = test_info is not None and "script" in test_info
+
+    if test_info is not None:
+        test_filename = os.path.join(ctx.build_directory, "test.sh")
+
+        with open(test_filename, "w") as f:
+            f.write(ctx.execute_template(test_info.get("script") or ""))
+
+        os.chmod(test_filename, 0o755)
+
     # Write Dockerfile
     if ctx.build_kind == "neurodocker":
-        dockerfile = ctx.build_neurodocker(ctx.build_info, ctx.deploy)
+        dockerfile = ctx.build_neurodocker(ctx.build_info, ctx.deploy, has_test)
 
         with open(os.path.join(ctx.build_directory, "Dockerfile"), "w") as f:
             f.write(dockerfile)
@@ -282,6 +321,17 @@ def main(args):
             cwd=ctx.build_directory,
         )
         print("Docker image built successfully at", ctx.tag)
+
+    if args.test:
+        if not has_test:
+            raise ValueError("No test script found.")
+
+        print("Running tests...")
+        # Run tests
+        subprocess.check_call(
+            ["docker", "run", ctx.tag, "/test.sh"], cwd=ctx.build_directory
+        )
+        print("Tests passed.")
 
 
 if __name__ == "__main__":
