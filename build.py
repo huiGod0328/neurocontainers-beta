@@ -80,7 +80,7 @@ class BuildContext(object):
         else:
             raise ValueError("Template object not supported.")
 
-    def build_neurodocker(self, build_directive, deploy, has_test):
+    def build_neurodocker(self, build_directive, deploy, test_cases):
         args = ["neurodocker", "generate", "docker"]
 
         base = self.execute_template(build_directive.get("base-image") or "")
@@ -163,8 +163,8 @@ class BuildContext(object):
 
         args += ["--copy", "README.md", "/README.md"]
 
-        if has_test:
-            args += ["--copy", "test.sh", "/test.sh"]
+        for test_case in test_cases:
+            args += ["--copy", f"tests/{test_case}", f"/tests/{test_case}"]
 
         return subprocess.check_output(args).decode("utf-8")
 
@@ -207,6 +207,10 @@ def main(args):
     version = description_file.get("version") or ""
 
     readme = description_file.get("readme") or ""
+
+    draft = description_file.get("draft") or False
+    if draft:
+        print("WARN: This is a draft recipe.")
 
     arch = ARCHITECTURES[platform.machine()]
 
@@ -291,21 +295,34 @@ def main(args):
         if "executable" in file and file["executable"]:
             os.chmod(output_filename, 0o755)
 
-    test_info = description_file.get("test") or None
+    test_info = description_file.get("tests") or []
 
-    has_test = test_info is not None and "script" in test_info
+    test_cases = []
 
-    if test_info is not None:
-        test_filename = os.path.join(ctx.build_directory, "test.sh")
+    os.makedirs(os.path.join(ctx.build_directory, "tests"))
 
-        with open(test_filename, "w") as f:
-            f.write(ctx.execute_template(test_info.get("script") or ""))
+    for test in test_info:
+        name = ctx.execute_template(test.get("name") or "")
+        script = ctx.execute_template(test.get("script") or "")
+        if name == "" or script == "":
+            raise ValueError("Test name or script cannot be empty.")
 
-        os.chmod(test_filename, 0o755)
+        # Check if condition is met
+        if "if" in test:
+            if not ctx.execute_condition(test["if"]):
+                continue
+
+        filename = name.lower().replace(" ", "_") + ".sh"
+        test_cases.append(filename)
+
+        with open(os.path.join(ctx.build_directory, "tests", filename), "w") as f:
+            f.write(script)
+
+        os.chmod(os.path.join(ctx.build_directory, "tests", filename), 0o755)
 
     # Write Dockerfile
     if ctx.build_kind == "neurodocker":
-        dockerfile = ctx.build_neurodocker(ctx.build_info, ctx.deploy, has_test)
+        dockerfile = ctx.build_neurodocker(ctx.build_info, ctx.deploy, test_cases)
 
         with open(os.path.join(ctx.build_directory, "Dockerfile"), "w") as f:
             f.write(dockerfile)
@@ -323,14 +340,17 @@ def main(args):
         print("Docker image built successfully at", ctx.tag)
 
     if args.test:
-        if not has_test:
-            raise ValueError("No test script found.")
-
         print("Running tests...")
-        # Run tests
-        subprocess.check_call(
-            ["docker", "run", ctx.tag, "/test.sh"], cwd=ctx.build_directory
-        )
+        if len(test_cases) == 0:
+            print("No tests found.")
+            return
+
+        for filename in test_cases:
+            subprocess.check_call(
+                ["docker", "run", ctx.tag, "/tests/" + filename],
+                cwd=ctx.build_directory,
+            )
+
         print("Tests passed.")
 
 

@@ -1,0 +1,51 @@
+name: itksnap
+version: 4.2.2
+draft: true
+
+variables:
+  repository: https://github.com/pyushkevich/itksnap.git
+  branch: v{{ context.version }}
+
+architectures:
+  - x86_64
+  - aarch64
+
+build:
+  kind: neurodocker
+
+  base-image: ubuntu:24.04
+  pkg-manager: apt
+
+  directives:
+    - install: git cmake build-essential
+    - workdir: /opt
+
+    # Compile ITK from source.
+    - run:
+      - git clone -b v5.4.0 --depth 1 https://github.com/InsightSoftwareConsortium/ITK.git
+      - cd ITK
+      - mkdir build
+      - cd build
+      - cmake ..
+      - make -j{{ parallel_jobs }}
+      - make install
+
+    # Compile ITK-SNAP from source.
+    - run:
+      - git clone --depth 1 --recursive --branch {{ context.branch }} {{ context.repository }}
+      - cd itksnap
+      - mkdir build
+      - cd build
+      - cmake ..
+      - make -j{{ parallel_jobs }}
+      - make install
+    - workdir: /
+    - run:
+      - wget https://www.nitrc.org/frs/download.php/750/MRI-crop.zip
+      - unzip /MRI-crop.zip
+      - rm /MRI-crop.zip
+    - environment:
+        QT_QPA_PLATFORM: xcb
+
+readme:
+  test
