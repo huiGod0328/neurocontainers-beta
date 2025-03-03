@@ -38,6 +38,7 @@ GLOBAL_MOUNT_POINT_LIST = [
 ]
 
 ARCHITECTURES = {
+    "x86_64": "x86_64",
     "arm64": "aarch64",
     "aarch64": "aarch64",
 }
