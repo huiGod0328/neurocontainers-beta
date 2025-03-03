@@ -1,0 +1,175 @@
+name: code
+version: "240320"
+
+architectures:
+  - x86_64
+
+build:
+  kind: neurodocker
+
+  base-image: debian
+  pkg-manager: apt
+
+  directives:
+    - environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - template:
+        name: miniconda
+        conda_install: python=3.11 nipype jupyter nb_conda_kernels h5py seaborn numpy
+        pip_install: osfclient
+        version: latest
+
+    - install:
+        - midori
+        - xdg-utils
+        - python-pyqt5
+        - unzip
+        - git
+        - apt-transport-https
+        - ca-certificates
+        - coreutils
+        - curl
+        - gnome-keyring
+        - gnupg
+        - libnotify4
+        - wget
+        - libnss3
+        - libxkbfile1
+        - libsecret-1-0
+        - libgtk-3-0
+        - libxss1
+        - libgbm1
+        - libxshmfence1
+        - libasound2
+        - cryptsetup
+        - squashfs-tools
+        - lua-bit32
+        - lua-filesystem
+        - lua-json
+        - lua-lpeg
+        - lua-posix
+        - lua-term
+        - lua5.2
+        - lmod
+        - imagemagick
+        - less
+        - nano
+        - tree
+        - gcc
+        - graphviz
+        - libzstd1
+        - zlib1g-dev
+        - zip
+        - build-essential
+        - uuid-dev
+        - libgpgme-dev
+        - libseccomp-dev
+        - pkg-config
+
+    - run:
+        - wget -O vscode.deb 'https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64'
+        - apt install ./vscode.deb
+        - rm -rf ./vscode.deb
+
+    - workdir: /opt
+
+    - run:
+        - wget https://julialang-s3.julialang.org/bin/linux/x64/1.6.3/julia-1.6.3-linux-x86_64.tar.gz
+        - tar zxvf julia-1.6.3-linux-x86_64.tar.gz
+        - rm -rf julia-1.6.3-linux-x86_64.tar.gz
+        - ln -s /opt/julia-1.6.3 /opt/julia-latest
+
+    - run:
+        - code --extensions-dir=/opt/vscode-extensions --user-data-dir=/opt/vscode-data --install-extension ms-python.python
+        - code --extensions-dir=/opt/vscode-extensions --user-data-dir=/opt/vscode-data --install-extension julialang.language-julia
+        - code --extensions-dir=/opt/vscode-extensions --user-data-dir=/opt/vscode-data --install-extension ms-python.vscode-pylance
+        - code --extensions-dir=/opt/vscode-extensions --user-data-dir=/opt/vscode-data --install-extension ms-toolsai.jupyter
+        - code --extensions-dir=/opt/vscode-extensions --user-data-dir=/opt/vscode-data --install-extension ms-toolsai.jupyter-keymap
+        - code --extensions-dir=/opt/vscode-extensions --user-data-dir=/opt/vscode-data --install-extension ms-toolsai.jupyter-renderers
+        - rm -rf /opt/vscode-extensions/ms-python.vscode-pylance-2023.1.10/dist/native/onnxruntime/napi-v3/darwin/x64/libonnxruntime.1.13.1.dylib
+        - rm -rf /opt/vscode-extensions/ms-python.vscode-pylance-2023.1.10/dist/native/onnxruntime/napi-v3/darwin/arm64/libonnxruntime.1.13.1.dylib
+        - rm -rf /opt/vscode-extensions/ms-python.vscode-pylance-2023.1.10/dist/native/onnxruntime/napi-v3/linux/x64/libonnxruntime.so.1.13.1
+        - rm -rf /opt/vscode-extensions/ms-python.python-2022.16.1/out/client/extension.js.map.disabled
+        - rm -rf /opt/vscode-extensions/ms-python.vscode-pylance-2023.1.10/dist/native/onnxruntime/napi-v3/win32/x64/onnxruntime.dll
+        - rm -rf /opt/vscode-extensions/ms-toolsai.jupyter-renderers-1.0.9/out/client_renderer/vega.bundle.js
+        - rm -rf /opt/vscode-extensions/julialang.language-julia-1.38.2/dist/extension.js.map
+        - rm -rf /opt/vscode-extensions/ms-python.python-2022.16.1/pythonFiles/lib/python/debugpy/_vendored/pydevd/pydevd_attach_to_process/inject_dll_x86.pdb
+        - rm -rf /opt/vscode-extensions/ms-python.python-2022.16.1/pythonFiles/lib/python/debugpy/_vendored/pydevd/pydevd_attach_to_process/inject_dll_amd64.pdb
+        - rm -rf /opt/vscode-data/CachedExtensionVSIXs/
+
+    - environment:
+        DONT_PROMPT_WSL_INSTALL: "1"
+        GOPATH: $HOME/go
+        PATH: $PATH:/usr/local/go/bin:$PATH:/bin
+
+    - run:
+        - wget https://dl.google.com/go/go1.17.2.linux-amd64.tar.gz
+        - tar -C /usr/local -xzvf go1.17.2.linux-amd64.tar.gz
+        - rm go1.17.2.linux-amd64.tar.gz
+        - mkdir -p /src/github.com/sylabs
+        - cd /src/github.com/sylabs
+        - wget https://github.com/sylabs/singularity/releases/download/v3.9.3/singularity-ce-3.9.3.tar.gz
+        - tar -xzvf singularity-ce-3.9.3.tar.gz
+        - cd singularity-ce-3.9.3
+        - ./mconfig --without-suid --prefix=/usr/local/singularity
+        - make -C builddir
+        - make -C builddir install
+        - cd ..
+        - rm -rf singularity-ce-3.9.3
+        - rm -rf /usr/local/go
+        - ln -s /usr/local/singularity/bin/singularity /bin/
+
+    - copy: code /usr/local/sbin/
+
+    - run:
+        - chmod a+x /usr/local/sbin/code
+        - chmod a+rwx /opt/vscode-extensions/ -R
+        - chmod a+rwx /opt/vscode-data -R
+
+    - copy: module.sh /usr/share/
+
+    - user: neuro
+
+deploy:
+  bins:
+    - code
+
+readme: |-
+  ----------------------------------
+  ## code/220114 ##
+  Python and Julia environment with VScode and singularity
+
+  Example:
+  ```
+  code
+  ```
+
+  More documentation can be found here:
+
+  To run applications outside of this container: ml mne/220114
+
+  ----------------------------------
+
+files:
+  - name: code
+    contents: |-
+      #!/usr/bin/env sh
+      /usr/bin/code --extensions-dir=/opt/vscode-extensions --no-sandbox
+
+  - name: module.sh
+    contents: |-
+      # system-wide profile.modules                                          #
+      # Initialize modules for all sh-derivative shells                      #
+      #----------------------------------------------------------------------#
+      trap "" 1 2 3
+
+      case "$0" in
+          -bash|bash|*/bash) . /usr/share/lmod/6.6/init/bash ;;
+             -ksh|ksh|*/ksh) . /usr/share/lmod/6.6/init/ksh ;;
+             -zsh|zsh|*/zsh) . /usr/share/lmod/6.6/init/zsh ;;
+                -sh|sh|*/sh) . /usr/share/lmod/6.6/init/sh ;;
+                          *) . /usr/share/lmod/6.6/init/sh ;;  # default for scripts
+      esac
+
+      trap - 1 2 3

@@ -36,7 +36,7 @@ def write_yaml_file(file_path, data):
             f,
             sort_keys=False,
             default_flow_style=False,
-            width=1000,
+            width=10000,
         )
 
 
@@ -68,12 +68,22 @@ def migrate(data):
             ret["deploy"]["bins"] = []
         ret["deploy"]["bins"].append(bin)
 
+    def add_file(filename, contents):
+        if "files" not in ret:
+            ret["files"] = []
+        ret["files"].append({"name": filename, "contents": contents})
+
     for arg in data["args"]:
         if "run" in arg:
             cmd = arg["run"].strip()
+
             if cmd in IGNORED_COMMANDS:
                 continue
-            add_directive({"run": [cmd]})
+
+            if " && " in cmd:
+                add_directive({"run": [s.rstrip() for s in cmd.split(" && ")]})
+            else:
+                add_directive({"run": [cmd]})
         elif "install" in arg:
             add_directive({"install": arg["install"]})
         elif "workdir" in arg:
@@ -89,6 +99,8 @@ def migrate(data):
             )
         elif "user" in arg:
             add_directive({"user": arg["user"]})
+        elif "entrypoint" in arg:
+            add_directive({"entrypoint": arg["entrypoint"]})
         elif "copy-from" in arg:
             raise NotImplementedError("copy-from is not supported")
         elif "env" in arg:
@@ -107,15 +119,20 @@ def migrate(data):
         elif "copy" in arg:
             target = arg["copy"]
             filename = arg["filename"]
-            contents = arg["contents"].strip()
+            contents = None
+            if "contents" in arg and arg["contents"] is not None:
+                contents = arg["contents"].strip()
             if target == "/README.md":
                 ret["readme"] = (
                     contents.replace("toolVersion", "{{ context.version }}")
                     .replace(ret["version"], "{{ context.version }}")
                     .replace("\\n", "\n")
                 )
+            elif contents == None:
+                add_directive({"copy": [filename, target]})
             else:
-                raise NotImplementedError("Unsupported copy target")
+                add_file(filename, contents)
+                add_directive({"copy": filename + " " + target})
         else:
             print(arg)
             raise NotImplementedError("Unsupported argument")

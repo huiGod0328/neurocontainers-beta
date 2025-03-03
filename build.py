@@ -122,6 +122,10 @@ class BuildContext(object):
                 ]
             elif "workdir" in directive:
                 return ["--workdir", self.execute_template(directive["workdir"])]
+            elif "user" in directive:
+                return ["--user", self.execute_template(directive["user"])]
+            elif "entrypoint" in directive:
+                return ["--entrypoint", self.execute_template(directive["entrypoint"])]
             elif "environment" in directive:
                 ret = []
                 for key, value in directive["environment"].items():
