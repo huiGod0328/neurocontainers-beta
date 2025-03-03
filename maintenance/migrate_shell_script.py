@@ -1,5 +1,6 @@
 import os
 import yaml
+from subprocess import check_call
 
 IGNORED_COMMANDS = [
     "printf '#!/bin/bash\\nls -la' > /usr/bin/ll",
@@ -69,7 +70,7 @@ def migrate(data):
 
     for arg in data["args"]:
         if "run" in arg:
-            cmd = arg["run"].replace("\n", " ").strip()
+            cmd = arg["run"].strip()
             if cmd in IGNORED_COMMANDS:
                 continue
             add_directive({"run": [cmd]})
@@ -96,6 +97,9 @@ def migrate(data):
                 if key == "DEPLOY_PATH":
                     for path in arg["env"]["DEPLOY_PATH"].split(":"):
                         add_deploy_path(path)
+                elif key == "DEPLOY_BINS":
+                    for bin in arg["env"]["DEPLOY_BINS"].split(":"):
+                        add_deploy_bin(bin)
                 else:
                     filtered_env[key] = arg["env"][key]
             if len(filtered_env) > 0:
@@ -105,9 +109,11 @@ def migrate(data):
             filename = arg["filename"]
             contents = arg["contents"].strip()
             if target == "/README.md":
-                ret["readme"] = contents.replace(
-                    "toolVersion", "{{ context.version }}"
-                ).replace("\\n", "\n")
+                ret["readme"] = (
+                    contents.replace("toolVersion", "{{ context.version }}")
+                    .replace(ret["version"], "{{ context.version }}")
+                    .replace("\\n", "\n")
+                )
             else:
                 raise NotImplementedError("Unsupported copy target")
         else:
@@ -129,6 +135,9 @@ def main(args):
         os.makedirs(os.path.dirname(output_filename))
 
     write_yaml_file(output_filename, migrated_data)
+
+    if os.getenv("TEST") == "1":
+        check_call(["python3", "build.py", "--recreate", output_filename, "build"])
 
 
 if __name__ == "__main__":
