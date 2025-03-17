@@ -179,6 +179,62 @@ def http_get(url):
         return response.read().decode("utf-8")
 
 
+TINYRANGE_CPU_CORES = 4
+TINYRANGE_MEMORY_SIZE = 8 * 1024  # In megabytes
+TINYRANGE_ROOT_SIZE = 8 * 1024  # In megabytes
+TINYRANGE_DOCKER_PERSIST_SIZE = 4 * 1024  # In megabytes
+
+
+def build_tinyrange(tinyrange_path, description_file, output_dir, name, version):
+    # ensure the output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+
+    build_dir = subprocess.check_output([tinyrange_path, "env", "build-dir"])
+
+    # Remove the persist docker image each time.
+    os.remove(os.path.join(build_dir, "persist", "docker_persist.img"))
+
+    description_filename = os.path.basename(description_file)
+
+    login_file = {
+        "version": 1,
+        "builder": "alpine@3.21",
+        "service_commands": [
+            "dockerd",
+        ],
+        "commands": [
+            "%verbose,exit_on_failure",
+            "cd /root;python3 -m venv env;source env/bin/activate;pip install -r requirements.txt",
+            f"cd /root;source env/bin/activate;python build.py --build {description_filename} build",
+            "killall dockerd",
+        ],
+        "files": ["../build.py", "../requirements.txt", "../" + description_file],
+        "packages": ["py3-pip", "docker"],
+        "macros": ["//lib/alpine_kernel:kernel,3.21"],
+        "volumes": [
+            f"docker,{str(TINYRANGE_DOCKER_PERSIST_SIZE)},/var/lib/docker,persist"
+        ],
+        "min_spec": {
+            "cpu": TINYRANGE_CPU_CORES,
+            "memory": TINYRANGE_MEMORY_SIZE,
+            "disk": TINYRANGE_ROOT_SIZE,
+        },
+    }
+
+    with open(os.path.join(output_dir, f"{name}_{version}.yaml"), "w") as f:
+        yaml.dump(login_file, f)
+
+    subprocess.check_call(
+        [
+            tinyrange_path,
+            "login",
+            "--verbose",
+            "-c",
+            os.path.join(output_dir, f"{name}_{version}.yaml"),
+        ]
+    )
+
+
 def main(args):
     parser = argparse.ArgumentParser(
         description="Build a Docker image from a description file."
@@ -190,6 +246,16 @@ def main(args):
     )
     parser.add_argument(
         "--build", action="store_true", help="Build the Docker image after creating it"
+    )
+    parser.add_argument(
+        "--build-tinyrange",
+        action="store_true",
+        help="Build the Docker image after creating it using TinyRange",
+    )
+    parser.add_argument(
+        "--tinyrange-path",
+        help="Path to the TinyRange binary",
+        default="tinyrange",
     )
     parser.add_argument(
         "--max-parallel-jobs",
@@ -210,6 +276,16 @@ def main(args):
     # Get basic information
     name = description_file.get("name") or ""
     version = description_file.get("version") or ""
+
+    if args.build_tinyrange:
+        build_tinyrange(
+            args.tinyrange_path,
+            args.description_file,
+            args.output_directory,
+            name,
+            version,
+        )
+        return
 
     readme = description_file.get("readme") or ""
 
