@@ -1,0 +1,63 @@
+name: globus
+version: 3.2.2
+
+architectures:
+  - x86_64
+
+build:
+  kind: neurodocker
+
+  base-image: fedora:37
+  pkg-manager: yum
+
+  directives:
+    - install:
+        - wget
+        - ca-certificates
+        - tk
+        - tcllib
+        - glibc
+        - libxcrypt-compat
+        - libXScrnSaver
+
+    - workdir: /opt
+
+    - run:
+        - wget https://downloads.globus.org/globus-connect-personal/linux/stable/globusconnectpersonal-latest.tgz
+        - tar xzf globusconnectpersonal-latest.tgz
+        - rm -rf globusconnectpersonal-latest.tgz
+
+    - environment:
+        PATH: $PATH:/opt/globusconnectpersonal-{{ context.version }}/
+
+deploy:
+  path:
+    - /opt/globusconnectpersonal-{{ context.version }}/
+
+readme: |-
+  ----------------------------------
+  ## globus/{{ context.version }} ##
+  Globus client
+
+  Example:
+  ```
+  # First run the setup:
+  globusconnectpersonal -setup
+
+  #Follow the instructions in the terminal:
+  #1) copy the URL into a browser and generate the Native App Authorization Code
+  #2) then copy this code and paste it in the terminal
+  #3) then name the endpoint, e.g. Neurodesktop
+
+  # Then start the GUI:
+  globusconnectpersonal -gui
+
+  # If the connection fails, reset the permissions on the key file:
+  chmod 600 ~/.globusonline/lta/relay-anonymous-key.pem
+  ```
+
+  More documentation can be found here: https://www.neurodesk.org/docs/getting-started/neurodesktop/storage/#globus
+
+  To make the executables and scripts inside this container transparently available in the command line of environments where Neurocommand is installed: ml globus/{{ context.version }}
+
+  ----------------------------------

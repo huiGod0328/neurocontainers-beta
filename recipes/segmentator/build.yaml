@@ -1,0 +1,87 @@
+name: segmentator
+version: 1.6.1
+
+architectures:
+  - x86_64
+
+build:
+  kind: neurodocker
+
+  base-image: ubuntu:20.04
+  pkg-manager: apt
+
+  directives:
+    - environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - install:
+        - wget
+        - git
+        - gcc
+        - curl
+        - ca-certificates
+        - unzip
+        - gfortran
+        - build-essential
+        - libxt6
+        - libxext6
+        - libxtst6
+        - libgl1-mesa-glx
+        - libc6
+        - libice6
+        - libsm6
+        - libx11-6
+
+    - template:
+        name: miniconda
+        conda_install: python=3.8 numpy=1.22.0 matplotlib=3.1.1
+        mamba: "true"
+        pip_install: nibabel==2.5.1 pytest-cov==2.7.1 compoda==0.3.5 scipy==1.3.1
+        version: py38_22.11.1-1
+
+    - workdir: /opt
+
+    - run:
+        - wget https://github.com/ofgulban/segmentator/archive/refs/tags/v1.6.1.zip
+        - unzip v1.6.1.zip
+        - rm v1.6.1.zip
+        - cd segmentator-1.6.1/
+        - python setup.py install
+
+    - copy: test.sh /test.sh
+
+deploy:
+  bins:
+    - segmentator
+
+readme: |
+  ----------------------------------
+  ## segmentator/{{ context.version }} ##
+  Segmentator is a free and open-source package for multi-dimensional data exploration and segmentation for 3D images. This application is mainly developed and tested using ultra-high field magnetic resonance imaging (MRI) brain data.
+
+  The goal is to provide a complementary tool to the already available brain tissue segmentation methods (to the best of our knowledge) in other software packages (FSL, CBS-Tools, ITK-SNAP, Freesurfer, SPM, Brainvoyager, etc.).
+
+  Example:
+  ```
+  segmentator /path/to/file.nii.gz
+  ```
+
+  More documentation can be found here: https://github.com/ofgulban/segmentator/wiki
+
+  To make the executables and scripts inside this container transparently available in the command line of environments where Neurocommand is installed: ml segmentator/{{ context.version }}
+
+  Citation:
+  ```
+  Kniss, J., Kindlmann, G., & Hansen, C. D. (2005). Multidimensional transfer functions for volume rendering. Visualization Handbook, 189\u2013209. http://doi.org/10.1016/B978-012387582-2/50011-3
+  ```
+
+  License: BSD-3-Clause https://github.com/ofgulban/segmentator?tab=BSD-3-Clause-1-ov-file
+
+  ----------------------------------
+
+files:
+  - name: test.sh
+    contents: |-
+      pip install osfclient
+      osf -p bt4ez fetch TOMCAT_DIB/sub-01/ses-01_7T/anat/sub-01_ses-01_7T_T1w_defaced.nii.gz
+      segmentator sub-01_ses-01_7T_T1w_defaced.nii.gz

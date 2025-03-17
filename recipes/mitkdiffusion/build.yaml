@@ -1,0 +1,63 @@
+name: mitkdiffusion
+version: 1.2.0
+
+architectures:
+  - x86_64
+
+build:
+  kind: neurodocker
+
+  base-image: ubuntu:20.04
+  pkg-manager: apt
+
+  directives:
+    - environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - install:
+        - libgomp1
+        - libasound2
+        - libnss3
+        - libqt5gui5
+        - libxi6
+        - wget
+        - ca-certificates
+        - libxtst6
+        - libxcomposite1
+        - libxdamage1
+        - libxcursor1
+
+    - workdir: /opt
+
+    - run:
+        - wget https://www.mitk.org/download/diffusion/nightly/MITK-Diffusion_ubuntu-20.04_2023.07.20_a754b053_32d7d08a_NoPython.tar.gz \
+        - tar xfz MITK-Diffusion_ubuntu-20.04_2023.07.20_a754b053_32d7d08a_NoPython.tar.gz \
+        - rm -rf MITK-Diffusion_ubuntu-20.04_2023.07.20_a754b053_32d7d08a_NoPython.tar.gz
+
+    - environment:
+        PATH: $PATH:/opt/MITK-Diffusion-2018.09.99-linux-x86_64
+
+deploy:
+  path:
+    - /opt/MITK-Diffusion-2018.09.99-linux-x86_64
+
+readme: |
+  ----------------------------------
+  ## mitkdiffusion/{{ context.version }} ##
+  The MITK Diffusion application offers a selection of image analysis algorithms for the processing of diffusion-weighted MR images.
+
+  Example:
+  ```
+  MitkDiffusion.sh
+  ```
+
+  More documentation can be found here: https://github.com/MIC-DKFZ/MITK-Diffusion
+
+  To make the executables and scripts inside this container transparently available in the command line of environments where Neurocommand is installed: ml mitkdiffusion/{{ context.version }}
+
+  Citation:
+  ```
+  Fritzsche, Klaus H., Peter F. Neher, Ignaz Reicht, Thomas van Bruggen, Caspar Goch, Marco Reisert, Marco Nolden, et al. \u201CMITK Diffusion Imaging.\u201D Methods of Information in Medicine 51, no. 5 (2012): 441.
+  ```
+
+  ----------------------------------

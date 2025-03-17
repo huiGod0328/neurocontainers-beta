@@ -1,0 +1,61 @@
+name: template
+version: "1.0"
+
+architectures:
+  - x86_64
+
+build:
+  kind: neurodocker
+
+  base-image: neurodebian:sid-non-free
+  pkg-manager: apt
+
+  directives:
+    - environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - workdir: /opt
+
+    - install:
+        - wget
+        - git
+        - curl
+        - ca-certificates
+        - unzip
+
+    - environment:
+        PATH: $PATH:/opt/template-1.0/bin
+
+    - copy: test.sh /test.sh
+
+    - run:
+        - bash /test.sh
+deploy:
+  path:
+    - /opt/template-1.0/bin/
+
+readme: |-
+  ----------------------------------
+  ## REPLACE_WITH_Name_of_Container/{{ context.version }} ##
+  Short_description_of_container
+
+  Example:
+  ```
+  ```
+
+  More documentation can be found here: link_to_documentation
+
+  To make the executables and scripts inside this container transparently available in the command line of environments where Neurocommand is installed: ml REPLACE_WITH_Name_of_Container/{{ context.version }}
+
+  Citation:
+  ```
+
+  ```
+
+  License:
+
+  ----------------------------------
+
+files:
+  - name: test.sh
+    contents: ""

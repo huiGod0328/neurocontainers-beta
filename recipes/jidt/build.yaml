@@ -1,0 +1,153 @@
+name: jidt
+version: "1.6"
+
+architectures:
+  - x86_64
+
+build:
+  kind: neurodocker
+
+  base-image: ubuntu:22.04
+  pkg-manager: apt
+
+  directives:
+    - workdir: /opt/jidt-{{ context.version }}/
+
+    - install:
+        - curl
+        - unzip
+        - openjdk-8-jre
+        - locales
+        - software-properties-common
+
+    - run:
+        - curl -s -k --retry 5 https://lizier.me/joseph/software/jidt/download.php?file=infodynamics-dist-{{ context.version }}.zip -o infodynamics-dist-{{ context.version }}.zip
+        - unzip infodynamics-dist-{{ context.version }}.zip -d infodynamics-dist-{{ context.version }}
+        - rm -rf infodynamics-dist-{{ context.version }}.zip
+
+    - template:
+        name: miniconda
+        conda_install: python=3.9 scipy scikit-learn matplotlib jupyter seaborn numpy pandas
+        pip_install: osfclient jpype1
+        version: latest
+
+    - workdir: /opt
+
+    - environment:
+        DEBIAN_FRONTEND: noninteractive
+        LANGUAGE: en_AU.UTF-8
+        LC_ALL: en_AU.UTF-8
+
+    - run:
+        - locale-gen en_AU.UTF-8
+
+    - install:
+        - wget
+        - ubuntu-desktop
+        - vim
+        - software-properties-common
+        - git
+        - cmake
+        - mesa-utils
+        - sudo
+        - build-essential
+        - python3-pip
+        - python3-pyqt5
+        - pyqt5-dev
+        - python3-tk
+        - python3-pandas
+        - python3-fire
+        - dirmngr
+        - gnupg
+        - apt-transport-https
+        - ca-certificates
+        - software-properties-common
+        - r-base
+        - gdebi-core
+        - libssl-dev
+        - curl
+        - libxml2-dev
+        - libcurl4-openssl-dev
+        - libharfbuzz-dev
+        - libfribidi-dev
+        - libclang-dev
+        - libpq5
+        - libfftw3-dev
+        - gpg-agent
+        - libgfortran-9-dev
+        - libblas-dev
+        - libblas64-dev
+        - liblapack-dev
+        - gfortran
+        - libudunits2-dev
+        - r-cran-ncdf4
+        - libgdal-dev
+        - libproj-dev
+        - libgeos-dev
+        - libudunits2-dev
+        - libnode-dev
+        - libcairo2-dev
+        - libnetcdf-dev
+
+    - run:
+        - wget https://download1.rstudio.org/desktop/jammy/amd64/rstudio-2022.07.2-576-amd64.deb
+        - gdebi -q -n /opt/rstudio-2022.07.2-576-amd64.deb
+        - rm -rf rstudio-2022.07.2-576-amd64.deb
+
+    - copy: dependencies.R /opt
+
+    - run:
+        - Rscript /opt/dependencies.R
+
+    - environment:
+        LD_LIBRARY_PATH: "/usr/local/cuda/lib64/stubs:/usr/local/cuda/lib64/:/usr/local/cuda/lib:"
+        PATH: /usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:~/.local/bin:/usr/local/cuda/bin
+
+deploy:
+  path:
+    - /opt/jidt-{{ context.version }}
+  bins:
+    - rstudio
+
+readme: |-
+  ----------------------------------
+  ## jidt/{{ context.version }} ##
+
+  JIDT: Java Information Dynamics Toolkit for studying information-theoretic
+  measures of computation in complex systems.
+
+  JIDT provides a stand-alone, open-source code Java implementation (also usable
+  in Matlab, Octave, Python, R, Julia and Clojure) of information-theoretic
+  measures of distributed computation in complex systems: i.e. information
+  storage, transfer and modification.
+
+  Examples can be found in `/opt/jidt-{{ context.version }}/infodynamics-dist-{{ context.version }}/demos`
+
+  An example in R:
+  ```
+  Rscript /opt/jidt-{{ context.version }}/infodynamics-dist-{{ context.version }}/demos/r/example1TeBinaryData.r
+  ```
+
+  More documentation can be found here: https://github.com/jlizier/jidt
+
+  To run applications outside of this container: ml jidt/{{ context.version }}
+
+  Container includes python and rstudio. Other data analysis environments you
+  may want to use, e.g. matlab, octave, julia, clojure are missing.
+
+  Citation:
+  ```
+  https://arxiv.org/abs/1408.3270
+  ```
+
+  ----------------------------------
+
+files:
+  - name: dependencies.R
+    contents: |-
+      # R Script to install the dependencies
+      if("rJava" %in% rownames(installed.packages()) == FALSE) {install.packages("rJava")}
+      if("Rcpp" %in% rownames(installed.packages()) == FALSE) {install.packages("Rcpp")}
+      if("devtools" %in% rownames(installed.packages()) == FALSE) {install.packages("devtools")}
+      if("rmarkdown" %in% rownames(installed.packages()) == FALSE) {install.packages("rmarkdown")}
+      if("plotly" %in% rownames(installed.packages()) == FALSE) {install.packages("plotly")}

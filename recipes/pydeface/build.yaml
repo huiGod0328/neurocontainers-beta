@@ -1,0 +1,57 @@
+name: pydeface
+version: 2.0.2
+
+architectures:
+  - x86_64
+
+build:
+  kind: neurodocker
+
+  base-image: vnmd/fsl_6.0.3:20200905
+  pkg-manager: apt
+
+  directives:
+    - environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - install:
+        - ca-certificates
+
+    - template:
+        name: miniconda
+        conda_install: python=3.7 nipype=1.5.1 nibabel=4.0.1 numpy=1.21.6
+        pip_install: osfclient pydeface==2.0.2
+        version: 4.6.14
+
+    - environment:
+        PATH: $PATH:/opt/pydeface/bin
+
+deploy:
+  path:
+    - /opt/pydeface-2.0.2/bin/
+    - /opt/pydeface/bin
+
+readme: |-
+  ----------------------------------
+  ## pydeface/{{ context.version }} ##
+  pydeface is defacing utility for MRI images
+
+
+  Example:
+  ```
+  pydeface infile.nii.gz
+  ```
+
+  More documentation can be found here: https://github.com/poldracklab/pydeface/
+
+  Citation:
+  ```
+  https://github.com/poldracklab/pydeface/
+  ```
+
+  License:
+  PyDeface is licensed under MIT license.
+
+  To run container outside of this environment: ml pydeface/{{ context.version }}
+
+  ----------------------------------

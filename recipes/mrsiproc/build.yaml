@@ -1,0 +1,368 @@
+name: mrsiproc
+version: 0.2.0
+
+architectures:
+    - x86_64
+
+build:
+    kind: neurodocker
+
+    base-image: vnmd/fsl_6.0.7.1
+    pkg-manager: apt
+
+    directives:
+        - user: root
+
+        - template:
+              name: dcm2niix
+              method: source
+              version: 003f0d19f1e57b0129c9dcf3e653f51ca3559028
+
+        - template:
+              name: minc
+              version: 1.9.15
+
+        - install:
+              - wget
+              - curl
+              - git
+              - ca-certificates
+              - ltrace
+              - strace
+              - libxml2
+              - gcc
+              - build-essential
+              - gzip
+              - tar
+              - unzip
+              - datalad
+              - libfftw3-3
+              - software-properties-common
+              - bc
+
+        - run:
+              - sudo apt remove -y libjpeg62
+              - wget http://ftp.br.debian.org/debian/pool/main/libj/libjpeg-turbo/libjpeg62-turbo_2.0.6-4_amd64.deb
+              - dpkg -i libjpeg62-turbo_2.0.6-4_amd64.deb
+              - rm libjpeg62-turbo_2.0.6-4_amd64.deb
+
+        - template:
+              name: miniconda
+              version: latest
+
+        - workdir: /opt
+
+        - run:
+              - git clone https://github.com/MIC-DKFZ/HD-BET
+
+        - workdir: /opt/HD-BET
+
+        - run:
+              - echo 'import os' > /opt/HD-BET/HD_BET/paths.py
+
+        - run:
+              - echo 'folder_with_parameter_files = \"/opt/HD-BET/hd-bet_params\"' >> /opt/HD-BET/HD_BET/paths.py
+
+        - run:
+              - mkdir -p /opt/HD-BET/hd-bet_params
+
+        - run:
+              - curl -o /opt/HD-BET/hd-bet_params/0.model https://zenodo.org/record/2540695/files/0.model?download=1
+              - curl -o /opt/HD-BET/hd-bet_params/1.model https://zenodo.org/record/2540695/files/1.model?download=1
+              - curl -o /opt/HD-BET/hd-bet_params/2.model https://zenodo.org/record/2540695/files/2.model?download=1
+              - curl -o /opt/HD-BET/hd-bet_params/3.model https://zenodo.org/record/2540695/files/3.model?download=1
+              - curl -o /opt/HD-BET/hd-bet_params/4.model https://zenodo.org/record/2540695/files/4.model?download=1
+
+        - run:
+              - pip install -e .
+
+        - workdir: /opt/lcmodel-6.3/
+
+        - install:
+              - curl
+              - ca-certificates
+              - libxft2
+              - libxss1
+              - libnet-ifconfig-wrapper-perl
+              - vim
+              - nano
+              - unzip
+              - gv
+              - unrar
+
+        - run:
+              - curl -o /opt/lcm-64.tar http://www.s-provencher.com/pub/LCModel/programs/lcm-64.tar
+              - tar xf /opt/lcm-64.tar
+              - rm -rf /opt/lcm-64.tar
+              - gunzip  -c  lcm-core.tar.gz  |  tar  xf  -
+              - rm -rf lcm-core.tar.gz
+
+        - workdir: /opt/lcmodel-6.3/.lcmodel/basis-sets
+        - run:
+              - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/3t.zip http://www.s-provencher.com/pub/LCModel/3t.zip
+              - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/3t.zip
+              - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/3t.zip
+        - run:
+              - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/1.5t.zip http://www.s-provencher.com/pub/LCModel/1.5t.zip
+              - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/1.5t.zip
+              - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/1.5t.zip
+        - run:
+              - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/7t.zip http://www.s-provencher.com/pub/LCModel/7t.zip
+              - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/7t.zip
+              - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/7t.zip
+        - run:
+              - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/9.4t.zip http://www.s-provencher.com/pub/LCModel/9.4t.zip
+              - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/9.4t.zip
+              - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/9.4t.zip
+        - run:
+              - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/basisset_LCModel.zip https://www.ismrm.org/workshops/Spectroscopy16/mrs_fitting_challenge/basisset_LCModel.zip
+              - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/basisset_LCModel.zip
+              - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/basisset_LCModel.zip
+
+        - workdir: /opt/datasets
+        - run:
+              - curl -o /opt/lcmodel-6.3/manual.pdf http://www.lcmodel.com/pub/LCModel/manual/manual.pdf
+
+        - copy: setup_lcmodel.sh /opt/lcmodel-6.3/.lcmodel/bin
+
+        - workdir: /opt/lcmodel-6.3/.lcmodel/profiles/1/control-defaults
+
+        - copy: controlfiledefault /opt/lcmodel-6.3/.lcmodel/profiles/1/control-defaults/controlfiledefault
+        - copy: gui-defaults /opt/lcmodel-6.3/.lcmodel/profiles/1/gui-defaults
+
+        - run:
+              - chmod a+rwx /opt/lcmodel-6.3 -R
+
+        - environment:
+              PATH: \${PATH}:/opt/lcmodel-6.3/.lcmodel/bin/:/opt/lcmodel-6.3/.lcmodel/
+
+        - install:
+              - bc
+              - curl
+              - libncurses5
+              - libxext6
+              - libxmu6
+              - libxpm-dev
+              - libxt6
+              - unzip
+              - openjdk-8-jre
+              - dbus-x11
+
+        - run:
+              - wget https://ssd.mathworks.com/supportfiles/downloads/R2021b/Release/6/deployment_files/installer/complete/glnxa64/MATLAB_Runtime_R2021b_Update_6_glnxa64.zip
+              - unzip MATLAB_Runtime_R2021b_Update_6_glnxa64.zip -d mcrtmp
+              - mcrtmp/install -mode silent -destinationFolder /opt/MATLAB_Runtime_R2021b -agreeToLicense yes
+              - rm -rf mcrtmp
+              - rm -f MATLAB_Runtime_R2021b_Update_6_glnxa64.zip
+
+        - environment:
+              LD_LIBRARY_PATH: \${LD_LIBRARY_PATH}:/opt/MATLAB_Runtime_R2021b/R2021b/runtime/glnxa64:/opt/MATLAB_Runtime_R2021b/R2021b/bin/glnxa64:/opt/MATLAB_Runtime_R2021b/R2021b/sys/os/glnxa64:/opt/MATLAB_Runtime_R2021b/R2021b/extern/bin/glnxa64
+
+        - workdir: /opt
+
+        - run:
+              - wget https://julialang-s3.julialang.org/bin/linux/x64/1.10.4/julia-1.10.4-linux-x86_64.tar.gz
+              - tar zxvf julia-1.10.4-linux-x86_64.tar.gz
+              - rm -rf julia-1.10.4-linux-x86_64.tar.gz
+
+        - environment:
+              PATH: \${PATH}:/opt/julia-1.10.4/bin
+
+        - copy: install_packages.jl /opt
+
+        - environment:
+              JULIA_DEPOT_PATH: /opt/julia_depot
+
+        - run:
+              - julia install_packages.jl
+              - chmod -R 755 /opt/julia_depot/packages/MRSI
+
+        - environment:
+              JULIA_DEPOT_PATH: ~/.julia:/opt/julia_depot
+
+        - workdir: /opt
+
+        - install:
+              - language-pack-en
+              - gettext
+              - xterm
+              - x11-apps
+              - csh
+              - tcsh
+              - xorg
+              - xorg-dev
+              - xserver-xorg-video-intel
+              - libwayland-cursor0
+
+        - run:
+              - wget --quiet https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer_ubuntu20-7.4.1_amd64.deb
+              - dpkg -i freesurfer_ubuntu20-7.4.1_amd64.deb
+
+        - environment:
+              PATH: \${PATH}:/usr/local/freesurfer/7.4.1-1
+
+        - workdir: /opt
+
+        - install:
+              - parallel
+
+        - run:
+              - git clone https://github.com/korbinian90/mrsi_pipeline_neurodesk.git
+              - cd mrsi_pipeline_neurodesk
+              - git checkout 02ed0178bf2d7be3ec0406fee92333ae86de377d
+
+        - environment:
+              PATH: \${PATH}:/opt/mrsi_pipeline_neurodesk/Part1:/opt/mrsi_pipeline_neurodesk/Part2
+
+        - copy: update_mrsi.sh /opt/mrsi_pipeline_neurodesk
+
+        - run:
+              - chmod a+x /opt/mrsi_pipeline_neurodesk/update_mrsi.sh
+
+        - environment:
+              PATH: /neurodesktop-storage/mrsi_pipeline_neurodesk/Part1:/neurodesktop-storage/mrsi_pipeline_neurodesk/Part2:/opt/mrsi_pipeline_neurodesk:\${PATH}
+
+deploy:
+    path:
+        - /opt/lcmodel-6.3/.lcmodel/bin/
+        - /opt/lcmodel-6.3/.lcmodel/
+        - /opt/mrsi_pipeline_neurodesk/Part1
+        - /opt/mrsi_pipeline_neurodesk/Part2
+    bins:
+        - LCModel_Control_Volunteers_WatRef.m
+
+readme: |
+    ----------------------------------
+    ## mrsiproc/0.1.0 ##
+
+    Includes the following:
+    ##### -- OS: Ubuntu 20.04 (Built from fsl neurodocker)
+    ##### -- Minc             (Version 1.9.15)
+    ##### -- MATLAB Runtime   (Version R2021b)
+    ##### -- HD-BET           (Version 1.0)
+    ##### -- LCModel          (Version 6.3.1)
+    ##### -- dcm2niix
+    ##### -- Python           (Version 3.11.4)
+    ##### -- Julia            (Version 1.9.3)
+
+
+    Overview
+    --------------------------------------------
+    The MRSI reconstruction algorithms and scripts were created by the Wolfgang Bogner group.
+
+    To run applications outside of this container
+    ---------------------------------------------
+      ml mrsiproc/0.1.0
+
+
+    Run MRSI scripts
+    -----------------------------------------
+    ```bash
+    bash Part1_ProcessMRSI.sh
+    bash Part2_EvaluateMRSI.sh
+    ```
+
+    Update MRSI scripts version to newest github version
+    -----------------------------------------
+    ```bash
+    bash update_mrsi.sh
+    ```
+
+    Citation
+    --------
+
+      see individual Neurodesk containers for abovementioned software.
+
+    ----------------------------------
+
+files:
+    - name: setup_lcmodel.sh
+      contents: |-
+          #!/usr/bin/env bash
+          set -e
+
+          if [[ -d ~/.lcmodel/ ]]
+          then
+              echo ".lcmodel exists on your filesystem."
+              echo "Would you like to delete the local install and replace it with the new version? (y/n)"
+              read varname
+              if [[ "$varname" = "y" ]]
+              then
+                  echo "deleting local lcmodel ..."
+                  rm -rf ~/.lcmodel
+                  echo "Setting up lcmodel..."
+                  cp /opt/lcmodel-6.3/.lcmodel/ ~/ -R
+                  echo "done."
+              else
+                  echo "ok, not changing anything ..."
+              fi
+          else
+              echo "Setting up lcmodel..."
+              cp /opt/lcmodel-6.3/.lcmodel/ ~/ -R
+              echo "done."
+          fi
+
+    - name: controlfiledefault
+      contents: key= 210387309
+
+    - name: gui-defaults
+      contents: |-
+          i_agreementAccepted 1
+           i_balloonWait 3000
+           i_colorActiveFollowMe green
+           i_colorDanger red
+           i_colorEntry green
+           i_colorFollowMe yellow
+           i_controlDefaultsPath ~/.lcmodel/profiles/1/control-defaults/controlfiledefault
+           i_deleteAfterSeconds 86400.0
+           i_displayCommand lpr
+           i_displayPlot 0
+           i_executionScriptPath ~/.lcmodel/execution-scripts/standard
+           i_fileTypeBruker fid*  FID*
+           i_fileTypeGe5 P?????  G*
+           i_fileTypeGeLx p*.7  P*.7  P*.7.??
+           i_fileTypeMarconi *
+           i_fileTypeOther *
+           i_fileTypePhilips *
+           i_fileTypeSiemens *
+           i_fileTypeToshiba *
+           i_fileTypeVarian fid
+           i_fontPoints 10
+           i_installing 0
+           i_niceIncrement 5
+           i_nSaveDirectorySegments 1
+           i_plotAbsoluteValue 1
+           i_plotFrequencyDomain 0
+           i_plotTimeDomain 0
+           i_preserveConfiguration 0
+           i_printCommand gv -orientation=seascape 2>/dev/null
+           i_printCommandPlot gv -orientation=seascape 2>/dev/null
+           i_printPlot 1
+           i_saveControl 0
+           i_saveCoord 0
+           i_saveCoraw 0
+           i_saveCsv 0
+           i_saveDirectorySegment1 **defaultDir**
+           i_saveh2o 0
+           i_savemet 0
+           i_savePrint 0
+           i_savePs 1
+           i_saveTable 1
+           i_testRunDone 1
+
+    - name: install_packages.jl
+      contents: |-
+          import Pkg
+          ENV["JULIA_PKG_PRECOMPILE_AUTO"]=0
+          packages = ["MAT", "Comonicon"]
+          Pkg.add(packages)
+          Pkg.add(Pkg.PackageSpec(url="https://github.com/korbinian90/MRSI.jl"))
+
+    - name: update_mrsi.sh
+      contents: |-
+          #!/bin/bash
+
+          cd /neurodesktop-storage || exit
+          # rm without warning if folder doesn't exist
+          rm -rf mrsi_pipeline_neurodesk || true
+          git clone https://github.com/korbinian90/mrsi_pipeline_neurodesk.git

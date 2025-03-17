@@ -1,0 +1,61 @@
+name: fatsegnet
+version: 1.0.gpu
+
+architectures:
+  - x86_64
+
+build:
+  kind: neurodocker
+
+  base-image: tensorflow/tensorflow:1.6.0-gpu-py3
+  pkg-manager: apt
+
+  directives:
+    - install:
+        - git
+        - python3-tk
+
+    - workdir: /opt
+
+    - run:
+        - git clone https://github.com/Deep-MI/FatSegNet.git
+
+    - workdir: /opt/FatSegNet
+
+    - run:
+        - mv tool /tool
+
+    - run:
+        - pip3 --no-cache-dir install pandas==0.21.0 scikit-learn==0.19.1 scipy==1.1. scikit-image==0.15.0 SimpleITK==1.1.0 nibabel==2.2.1 keras==2.2.4 numpy==1.15.4
+
+    - workdir: /tool
+
+    - run:
+        - bash /tool/bash_profile
+
+deploy: {}
+
+readme: |-
+  ----------------------------------
+  ## fatsegnet/{{ context.version }} ##
+  This contains the tool designed for the Rhineland Study for segmenting visceral and subcuteneous adipose tissue on fat images from a two-point Dixon sequence.
+
+  If you use this tool please cite:
+
+  Estrada, Santiago, et al. "FatSegNet: A fully automated deep learning pipeline for adipose tissue segmentation on abdominal dixon MRI." Magnetic resonance in medicine 83.4 (2020): 1471-1483. https:// doi.org/10.1002/mrm.28022
+
+  Example:
+  ```
+  python3 tool/run_FatSegNet.py \
+  -i /YOUR_INFPUT_FOLDER \
+  -outp /YOUR_OUTPUT_FOLDER\
+  -loc
+  ```
+
+  Note: This container requires an NVIDIA GPU to run.
+
+  More documentation can be found here: https://github.com/Deep-MI/FatSegNet
+
+  To run container outside of this environment: ml fatsegnet/{{ context.version }}
+
+  ----------------------------------

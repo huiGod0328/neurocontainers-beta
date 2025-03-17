@@ -1,0 +1,206 @@
+name: lcmodel
+version: "6.3"
+
+architectures:
+  - x86_64
+
+build:
+  kind: neurodocker
+
+  base-image: ubuntu:16.04
+  pkg-manager: apt
+
+  directives:
+    - install:
+        - curl
+        - ca-certificates
+        - libxft2
+        - libxss1
+        - libtk8.5
+        - libnet-ifconfig-wrapper-perl
+        - vim
+        - nano
+        - unzip
+        - gv
+        - unrar
+
+    - workdir: /opt/lcmodel-6.3/
+
+    - run:
+        - curl -o /opt/lcm-64.tar http://www.lcmodel.com/pub/LCModel/programs/lcm-64.tar
+        - tar xf /opt/lcm-64.tar
+        - rm -rf /opt/lcm-64.tar
+
+    - run:
+        - gunzip  -c  lcm-core.tar.gz  |  tar  xf  -
+
+    - run:
+        - rm -rf lcm-core.tar.gz
+
+    - workdir: /opt/lcmodel-6.3/.lcmodel/basis-sets
+
+    - run:
+        - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/3t.zip http://www.s-provencher.com/pub/LCModel/3t.zip
+        - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/3t.zip"
+        - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/3t.zip"
+
+    - run:
+        - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/1.5t.zip http://www.s-provencher.com/pub/LCModel/1.5t.zip
+        - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/1.5t.zip
+        - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/1.5t.zip
+
+    - run:
+        - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/7t.zip http://www.s-provencher.com/pub/LCModel/7t.zip
+        - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/7t.zip
+        - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/7t.zip
+
+    - run:
+        - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/9.4t.zip http://www.s-provencher.com/pub/LCModel/9.4t.zip
+        - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/9.4t.zip
+        - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/9.4t.zip
+
+    - run:
+        - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/basisset_LCModel.zip https://www.ismrm.org/workshops/Spectroscopy16/mrs_fitting_challenge/basisset_LCModel.zip
+        - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/basisset_LCModel.zip
+        - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/basisset_LCModel.zip
+
+    - run:
+        - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/RawBasis_for_sLASERSiemens_TE_20_BW_4000_NPts_2048.zip http://juchem.bme.columbia.edu/sites/default/files/2021-01/RawBasis_for_sLASERSiemens_TE_20_BW_4000_NPts_2048.zip
+        - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/RawBasis_for_sLASERSiemens_TE_20_BW_4000_NPts_2048.zip
+        - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/RawBasis_for_sLASERSiemens_TE_20_BW_4000_NPts_2048.zip
+
+    - run:
+        - curl -o /opt/lcmodel-6.3/.lcmodel/basis-sets/RawBasis_for_sLASERSiemens_TE_20_BW_2500_NPts_1024.zip http://juchem.bme.columbia.edu/sites/default/files/2021-01/RawBasis_for_sLASERSiemens_TE_20_BW_2500_NPts_1024.zip
+        - unzip /opt/lcmodel-6.3/.lcmodel/basis-sets/RawBasis_for_sLASERSiemens_TE_20_BW_2500_NPts_1024.zip
+        - rm -rf /opt/lcmodel-6.3/.lcmodel/basis-sets/RawBasis_for_sLASERSiemens_TE_20_BW_2500_NPts_1024.zip
+
+    - copy: license /opt/lcmodel-6.3/.lcmodel/license
+
+    - workdir: /opt/datasets
+
+    - run:
+        - curl -o /opt/datasets/testdata.rar https://zenodo.org/record/3904443/files/Spectra_hippocampus%28rat%29_TE02.rar?download=1
+        - unrar x /opt/datasets/testdata.rar
+        - rm -rf /opt/datasets/testdata.rar
+
+    - run:
+        - curl -o /opt/lcmodel-6.3/manual.pdf http://www.lcmodel.com/pub/LCModel/manual/manual.pdf
+
+    - copy: setup_lcmodel.sh /opt/lcmodel-6.3/.lcmodel/bin
+
+    - workdir: /opt/lcmodel-6.3/.lcmodel/profiles/1/control-defaults
+
+    - copy: controlfiledefault /opt/lcmodel-6.3/.lcmodel/profiles/1/control-defaults/controlfiledefault
+
+    - copy: gui-defaults /opt/lcmodel-6.3/.lcmodel/profiles/1/gui-defaults
+
+    - run:
+        - chmod a+rwx /opt/lcmodel-6.3 -R
+
+    - environment:
+        PATH: /opt/lcmodel-6.3/.lcmodel/bin/:/opt/lcmodel-6.3/.lcmodel/:$PATH
+
+deploy:
+  path:
+    - /opt/lcmodel-6.3/.lcmodel/bin/
+    - /opt/lcmodel-6.3/.lcmodel/
+
+readme: |-
+  ----------------------------------
+  ## lcmodel/{{ context.version }} ##
+  Automatic quantification of in vivo proton MR spectra.
+
+  When using this for the first time, run:
+  ```
+  setup_lcmodel.sh
+  ```
+
+  Example:
+  ```
+  lcmgui
+  ```
+
+  More documentation can be found here: http://www.lcmodel.com/lcmodel.shtml
+  The manual contains a lot of useful information: http://www.lcmodel.com/pub/LCModel/manual/manual.pdf (or /opt/lcmodel-{{ context.version }}/manual.pdf)
+
+  To run container outside of this environment: ml lcmodel/{{ context.version }}
+
+  ----------------------------------
+
+files:
+  - name: license
+    contents: ""
+
+  - name: setup_lcmodel.sh
+    contents: |-
+      #!/usr/bin/env bash
+      set -e
+
+      if [[ -d ~/.lcmodel/ ]]
+      then
+          echo ".lcmodel exists on your filesystem."
+          echo "Would you like to delete the local install and replace it with the new version? (y/n)"
+          read varname
+          if [[ "$varname= "y ]]
+          then
+              echo "deleting local lcmodel ..."
+              rm -rf ~/.lcmodel
+              echo "Setting up lcmodel..."
+              cp /opt/lcmodel-6.3/.lcmodel/ ~/ -R
+              echo "done."
+          else
+              echo "ok, not changing anything ..."
+          fi
+      else
+          echo "Setting up lcmodel..."
+          cp /opt/lcmodel-6.3/.lcmodel/ ~/ -R
+          echo "done."
+      fi
+
+  - name: controlfiledefault
+    contents: key= 210387309
+
+  - name: gui-defaults
+    contents: |-
+      i_agreementAccepted 1
+       i_balloonWait 3000
+       i_colorActiveFollowMe green
+       i_colorDanger red
+       i_colorEntry green
+       i_colorFollowMe yellow
+       i_controlDefaultsPath ~/.lcmodel/profiles/1/control-defaults/controlfiledefault
+       i_deleteAfterSeconds 86400.0
+       i_displayCommand lpr
+       i_displayPlot 0
+       i_executionScriptPath ~/.lcmodel/execution-scripts/standard
+       i_fileTypeBruker fid*  FID*
+       i_fileTypeGe5 P?????  G*
+       i_fileTypeGeLx p*.7  P*.7  P*.7.??
+       i_fileTypeMarconi *
+       i_fileTypeOther *
+       i_fileTypePhilips *
+       i_fileTypeSiemens *
+       i_fileTypeToshiba *
+       i_fileTypeVarian fid
+       i_fontPoints 10
+       i_installing 0
+       i_niceIncrement 5
+       i_nSaveDirectorySegments 1
+       i_plotAbsoluteValue 1
+       i_plotFrequencyDomain 0
+       i_plotTimeDomain 0
+       i_preserveConfiguration 0
+       i_printCommand gv -orientation=seascape 2>/dev/null
+       i_printCommandPlot gv -orientation=seascape 2>/dev/null
+       i_printPlot 1
+       i_saveControl 0
+       i_saveCoord 0
+       i_saveCoraw 0
+       i_saveCsv 0
+       i_saveDirectorySegment1 **defaultDir**
+       i_saveh2o 0
+       i_savemet 0
+       i_savePrint 0
+       i_savePs 1
+       i_saveTable 1
+       i_testRunDone 1

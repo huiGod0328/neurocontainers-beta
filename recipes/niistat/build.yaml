@@ -1,0 +1,92 @@
+name: niistat
+version: 1.0.20191216
+
+architectures:
+  - x86_64
+
+build:
+  kind: neurodocker
+
+  base-image: ubuntu:22.04
+  pkg-manager: apt
+
+  directives:
+    - environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - install:
+        - octave
+        - curl
+        - ca-certificates
+        - wget
+        - unzip
+        - liboctave-dev
+        - patch
+        - make
+        - fonts-freefont-otf
+
+    - workdir: /opt/niistat-1.0.20191216/
+
+    - run:
+        - curl -fsSL --retry 5 https://github.com/neurolabusc/NiiStat/archive/refs/tags/v1.0.20191216.tar.gz       | tar -xz -C /opt/niistat-1.0.20191216/ --strip-components 1
+
+    - workdir: /opt/
+
+    - copy: SPMinOctave.m /opt/SPMinOctave.m
+
+    - run:
+        - octave SPMinOctave.m
+
+    - environment:
+        PATH: $PATH:/opt/niistat-1.0.20191216
+
+deploy:
+  bins:
+    - octave
+
+readme: |-
+  ----------------------------------
+  ## niistat/{{ context.version }} ##
+  NiiStat is a set of Matlab scripts for analyzing neuroimaging data from clinical populations
+
+  Example:
+  ```
+  octave
+
+  addpath (fullfile ("/opt/spm12-r7771"));
+  addpath (fullfile ("/opt/niistat-{{ context.version }}"));
+  spm
+  ```
+
+  More documentation can be found here:
+  https://www.nitrc.org/plugins/mwiki/index.php/niistat:MainPage
+  https://www.nitrc.org/plugins/mwiki/index.php?title=niistat:TutorialPage
+
+  To run applications outside of this container: ml niistat/{{ context.version }}
+
+  Citation:
+  ```
+  Winkler AM, Ridgway GR, Webster MA, Smith SM, Nichols TE. (2014) Permutation inference for the general linear model. Neuroimage. 92:381-97.
+  ```
+
+  ----------------------------------
+
+files:
+  - name: SPMinOctave.m
+    contents: |-
+      %% Store current working directory
+      cwd = pwd;
+      %% Download SPM12 r7771
+      unzip ("https://github.com/spm/spm12/archive/r7771.zip", cwd);
+      %% Patch SPM12
+      urlwrite ("https://raw.githubusercontent.com/spm/spm-docker/main/octave/spm12_r7771.patch", "spm12_r7771.patch");
+      system ("patch -p3 -d spm12-r7771 < spm12_r7771.patch");
+      %% Compile MEX files
+      cd (fullfile (cwd, "spm12-r7771", "src"));
+      system ("make PLATFORM=octave");
+      system ("make PLATFORM=octave install");
+      %% Add SPM12 to the function search path
+      addpath (fullfile (cwd, "spm12-r7771"));
+      cd (cwd);
+      %% Start SPM12 (dont start for now)
+      %% spm

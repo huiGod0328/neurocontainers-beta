@@ -1,0 +1,83 @@
+name: samri
+version: "0.5"
+
+architectures:
+  - x86_64
+
+build:
+  kind: neurodocker
+
+  base-image: vnmd/fsl_6.0.3:20200905
+  pkg-manager: apt
+
+  directives:
+    - template:
+        name: miniconda
+        conda_install: python=3.7 nipy nilearn traits argh joblib matplotlib numpy pandas scipy seaborn statsmodels nipype
+        pip_install: nibabel scikit-image pybids==0.6.5 pynrrd duecredit
+        use_env: base
+
+    - install:
+        - git
+        - zip
+        - wget
+        - libgtk2.0-0
+        - blender
+
+    - workdir: /opt
+
+    - run:
+        - git clone https://github.com/IBT-FMI/SAMRI.git
+
+    - workdir: /opt/SAMRI
+
+    - run:
+        - python setup.py install --user
+
+    - workdir: /opt/bru2
+
+    - run:
+        - wget https://github.com/neurolabusc/Bru2Nii/releases/download/v1.0.20180303/Bru2_Linux.zip
+
+    - run:
+        - unzip Bru2_Linux.zip
+
+    - environment:
+        PATH: $PATH:/opt/bru2:/root/.local/bin
+
+    - workdir: /opt
+
+    - template:
+        name: ants
+        version: 2.3.4
+
+    - run:
+        - git clone https://github.com/IBT-FMI/mouse-brain-atlases_generator.git
+
+    - workdir: /opt/mouse-brain-atlases_generator
+
+deploy:
+  bins:
+    - SAMRI
+
+readme: |-
+  ----------------------------------
+  ## samri/{{ context.version }} ##
+  samri standalone with Matlab Compiler Runtime
+
+  Example:
+  ```
+  SAMRI
+
+  SAMRI bru2bids -o . -f '{"acquisition":["EPI"]}' -s '{"acquisition":["TurboRARE"]}' samri_bindata
+
+  SAMRI diagnose bids
+
+  SAMRI generic-prep -m '/usr/share/mouse-brain-atlases/dsurqec_200micron_mask.nii' -f '{"acquisition":["EPIlowcov"]}' -s '{"acquisition":["TurboRARElowcov"]}' bids '/usr/share/mouse-brain-atlases/dsurqec_200micron.nii'
+  ```
+
+  More documentation can be found here: https://github.com/IBT-FMI/SAMRI
+
+  To run container outside of this environment: ml samri/{{ context.version }}
+
+  ----------------------------------
