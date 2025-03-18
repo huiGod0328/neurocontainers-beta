@@ -179,20 +179,30 @@ def http_get(url):
         return response.read().decode("utf-8")
 
 
-TINYRANGE_CPU_CORES = 4
-TINYRANGE_MEMORY_SIZE = 8 * 1024  # In megabytes
-TINYRANGE_ROOT_SIZE = 8 * 1024  # In megabytes
-TINYRANGE_DOCKER_PERSIST_SIZE = 4 * 1024  # In megabytes
-
-
 def build_tinyrange(tinyrange_path, description_file, output_dir, name, version):
+    tinyrange_config = None
+    try:
+        with open("tinyrange.yaml", "r") as f:
+            tinyrange_config = yaml.safe_load(f)
+    except FileNotFoundError:
+        print("WARN: TinyRange configuration file not found.")
+        tinyrange_config = {
+            "cpu_cores": 4,
+            "memory_size_gb": 8,
+            "root_size_gb": 8,
+            "docker_persist_size_gb": 16,
+        }
+
     # ensure the output directory exists
     os.makedirs(output_dir, exist_ok=True)
 
-    build_dir = subprocess.check_output([tinyrange_path, "env", "build-dir"])
+    build_dir = subprocess.check_output([tinyrange_path, "env", "build-dir"]).decode("utf-8")
 
     # Remove the persist docker image each time.
-    os.remove(os.path.join(build_dir, "persist", "docker_persist.img"))
+    try:
+        os.remove(os.path.join(build_dir, "persist", "docker_persist.img"))
+    except:
+        pass
 
     description_filename = os.path.basename(description_file)
 
@@ -212,12 +222,12 @@ def build_tinyrange(tinyrange_path, description_file, output_dir, name, version)
         "packages": ["py3-pip", "docker"],
         "macros": ["//lib/alpine_kernel:kernel,3.21"],
         "volumes": [
-            f"docker,{str(TINYRANGE_DOCKER_PERSIST_SIZE)},/var/lib/docker,persist"
+            f"docker,{str(tinyrange_config["docker_persist_size"] * 1024)},/var/lib/docker,persist"
         ],
         "min_spec": {
-            "cpu": TINYRANGE_CPU_CORES,
-            "memory": TINYRANGE_MEMORY_SIZE,
-            "disk": TINYRANGE_ROOT_SIZE,
+            "cpu": tinyrange_config["cpu_cores"],
+            "memory": tinyrange_config["memory_size"] * 1024,
+            "disk": tinyrange_config["root_size"] * 1024,
         },
     }
 

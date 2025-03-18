@@ -31,7 +31,7 @@ variables:
   conda_version: "4.12.0"
   conda_download_url:
     try:
-      - value: "https://repo.anaconda.com/miniconda/Miniconda3-{{ context.conda_version }}-Linux-x86_64.sh"
+      - value: "https://repo.anaconda.com/miniconda/Miniconda3-py37_{{ context.conda_version }}-Linux-x86_64.sh"
         condition: arch=="x86_64"
       - value: "https://repo.anaconda.com/miniconda/Miniconda3-py37_{{ context.conda_version }}-Linux-aarch64.sh"
         condition: arch=="aarch64"
