@@ -95,7 +95,7 @@ class BuildContext(object):
         args += [
             "--run=printf '#!/bin/bash\\nls -la' > /usr/bin/ll",
             "--run=chmod +x /usr/bin/ll",
-            f"--run=mkdir -p {" ".join(GLOBAL_MOUNT_POINT_LIST)}",
+            f"--run=mkdir -p {' '.join(GLOBAL_MOUNT_POINT_LIST)}"
         ]
 
         def add_directive(directive):
@@ -222,7 +222,7 @@ def build_tinyrange(tinyrange_path, description_file, output_dir, name, version)
         "packages": ["py3-pip", "docker"],
         "macros": ["//lib/alpine_kernel:kernel,3.21"],
         "volumes": [
-            f"docker,{str(tinyrange_config["docker_persist_size"] * 1024)},/var/lib/docker,persist"
+            f"docker,{str(tinyrange_config['docker_persist_size'] * 1024)},/var/lib/docker,persist"
         ],
         "min_spec": {
             "cpu": tinyrange_config["cpu_cores"],
