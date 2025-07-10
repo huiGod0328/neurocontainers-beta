@@ -6,14 +6,21 @@ architectures:
 
 build:
   kind: neurodocker
-
   base-image: ubuntu:16.04
   pkg-manager: apt
-
   directives:
-    - template:
-        name: ashs
-        version: 2.0.0
+    - run:
+        - apt-get update
+        - apt-get install -y --no-install-recommends curl unzip libxt6
+        - echo "Downloading ashs ..."
+        - curl -L -o /tmp/ashs.zip "https://www.nitrc.org/frs/download.php/10887/ashs-fastashs_2.0.0_07202018.zip"
+        - unzip /tmp/ashs.zip -d /
+        - ln -s /ashs-fastashs_beta/ /opt/ashs-2.0.0
+        - echo "Downloading atlas compatible with version 2.0.0 ..."
+        - mkdir /ashs_atlas_magdeburg_7t_20180416
+        - curl http://ashs.projects.nitrc.org/atlas_magdeburg/ashs_atlas_magdeburg_7t_20180416.tgz | tar -xz -C /ashs_atlas_magdeburg_7t_20180416
+        - echo "export ASHS_ROOT=/opt/ashs-2.0.0" >> /etc/bash.bashrc
+        - echo "export PATH=/opt/ashs-2.0.0/bin:\$PATH" >> /etc/bash.bashrc
 
     - user: neuro
 
@@ -27,20 +34,11 @@ readme: |-
   Hippocampus subfield segmentation toolkit
 
   Example:
-  ```
+  ```bash
   curl -o sub-01_ses-01_7T_T1w_defaced.nii.gz "https://files.au-1.osf.io/v1/resources/bt4ez/providers/osfstorage/5e9bf3ab430166067ea05564?action=download&direct&version=1"
   curl -o sub-01_ses-01_7T_T2w_run-1_tse.nii.gz "https://files.au-1.osf.io/v1/resources/bt4ez/providers/osfstorage/5e9bf3d1430166067ba07bff?action=download&direct&version=1"
-
   mkdir myworkdir
 
   $ASHS_ROOT/bin/ashs_main.sh -I subj001 -a /ashs_atlas_* \
      -g sub-01_ses-01_7T_T1w_defaced.nii.gz -f sub-01_ses-01_7T_T2w_run-1_tse.nii.gz \
      -w myworkdir/subj001
-
-  ```
-  More documentation can be found here: https://sites.google.com/view/ashs-dox/quick-start?authuser=0
-
-  To run container outside of this environment: ml ashs/2.0.0
-
-  License: GNU General Public License (GPL)
-  ----------------------------------
